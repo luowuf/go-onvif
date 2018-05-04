@@ -2,6 +2,7 @@ package onvif
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -48,37 +49,15 @@ func StartDiscovery(duration time.Duration) ([]Device, error) {
 
 func discoverDevices(ipAddr string, duration time.Duration) ([]Device, error) {
 	// Create WS-Discovery request
-	//requestID := "uuid:" + uuid.NewV4().String()
+	//fmt.Println("discoverDevices:", ipAddr)
+
 	id, err := uuid.NewV4()
 	if err != nil {
 		return []Device{}, err
 	}
-	requestID :="uuid:" + id.String()
+	requestID := "uuid:" + id.String()
 
-
-	request := `
-		<?xml version="1.0" encoding="UTF-8"?>
-		<e:Envelope
-		    xmlns:e="http://www.w3.org/2003/05/soap-envelope"
-		    xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
-		    xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
-		    xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
-		    <e:Header>
-		        <w:MessageID>` + requestID + `</w:MessageID>
-		        <w:To e:mustUnderstand="true">urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
-		        <w:Action a:mustUnderstand="true">http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe
-		        </w:Action>
-		    </e:Header>
-		    <e:Body>
-		        <d:Probe>
-		            <d:Types>dn:NetworkVideoTransmitter</d:Types>
-		        </d:Probe>
-		    </e:Body>
-		</e:Envelope>`
-
-	// Clean WS-Discovery message
-	request = regexp.MustCompile(`\>\s+\<`).ReplaceAllString(request, "><")
-	request = regexp.MustCompile(`\s+`).ReplaceAllString(request, " ")
+	//fmt.Println("requestID:", requestID)
 
 	// Create UDP address for local and multicast address
 	localAddress, err := net.ResolveUDPAddr("udp4", ipAddr+":0")
@@ -98,16 +77,17 @@ func discoverDevices(ipAddr string, duration time.Duration) ([]Device, error) {
 	}
 	defer conn.Close()
 
-	// Set connection's timeout
 	err = conn.SetDeadline(time.Now().Add(duration))
 	if err != nil {
 		return []Device{}, err
 	}
 
-	// Send WS-Discovery request to multicast address
-	_, err = conn.WriteToUDP([]byte(request), multicastAddress)
-	if err != nil {
-		return []Device{}, err
+	err1 := discoverMessageV1_1(requestID,conn,multicastAddress)
+
+	err2 := discoverMessageV1_2(requestID,conn,multicastAddress)
+
+	if err1 != nil && err2 != nil {
+		return []Device{}, err1
 	}
 
 	// Create initial discovery results
@@ -133,14 +113,80 @@ func discoverDevices(ipAddr string, duration time.Duration) ([]Device, error) {
 		if err != nil && err != errWrongDiscoveryResponse {
 			return discoveryResults, err
 		}
-
+		//fmt.Println("readDiscoveryResponse:", device.XAddr)
 		// Push device to results
 		discoveryResults = append(discoveryResults, device)
 	}
-
 	return discoveryResults, nil
+
 }
 
+func discoverMessageV1_1(requestID string,conn *net.UDPConn,multicastAddress *net.UDPAddr) (error) {
+
+	request := `
+		<?xml version="1.0" encoding="UTF-8"?>
+		<Envelope
+				xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
+				xmlns="http://www.w3.org/2003/05/soap-envelope">
+				<Header>
+						<wsa:MessageID xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">` + requestID + `</wsa:MessageID>
+						<wsa:To xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
+						<wsa:Action xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action>
+				</Header>
+				<Body>
+						<Probe
+								xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+								xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+								xmlns="http://schemas.xmlsoap.org/ws/2005/04/discovery">
+								<Types>tds:Device</Types>
+								<Scopes />
+						</Probe>
+				</Body>
+			</Envelope>`
+
+	// Clean WS-Discovery message
+	request = regexp.MustCompile(`\>\s+\<`).ReplaceAllString(request, "><")
+	request = regexp.MustCompile(`\s+`).ReplaceAllString(request, " ")
+
+
+	// Send WS-Discovery request to multicast address
+	_, err := conn.WriteToUDP([]byte(request), multicastAddress)
+
+	return err
+
+}
+func discoverMessageV1_2(requestID string,conn *net.UDPConn,multicastAddress *net.UDPAddr) (error) {
+
+	request := `
+		<?xml version="1.0" encoding="utf-8"?>
+		<Envelope
+				xmlns:tds="http://www.onvif.org/ver10/network/wsdl"
+				xmlns="http://www.w3.org/2003/05/soap-envelope">
+				<Header>
+						<wsa:MessageID xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">` + requestID + `</wsa:MessageID>
+						<wsa:To xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
+						<wsa:Action xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action>
+				</Header>
+				<Body>
+						<Probe
+								xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+								xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+								xmlns="http://schemas.xmlsoap.org/ws/2005/04/discovery">
+								<Types>dn:NetworkVideoTransmitter</Types>
+								<Scopes />
+						</Probe>
+				</Body>
+			</Envelope>`
+
+
+	// Clean WS-Discovery message
+	request = regexp.MustCompile(`\>\s+\<`).ReplaceAllString(request, "><")
+	request = regexp.MustCompile(`\s+`).ReplaceAllString(request, " ")
+
+	_, err := conn.WriteToUDP([]byte(request), multicastAddress)
+
+	return err
+}
 // readDiscoveryResponse reads and parses WS-Discovery response
 func readDiscoveryResponse(messageID string, buffer []byte) (Device, error) {
 	// Inital result
