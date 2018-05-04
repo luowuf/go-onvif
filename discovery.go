@@ -48,8 +48,15 @@ func StartDiscovery(duration time.Duration) ([]Device, error) {
 
 func discoverDevices(ipAddr string, duration time.Duration) ([]Device, error) {
 	// Create WS-Discovery request
-	requestID := "uuid:" + uuid.NewV4().String()
-	request := `		
+	//requestID := "uuid:" + uuid.NewV4().String()
+	id, err := uuid.NewV4()
+	if err != nil {
+		return []Device{}, err
+	}
+	requestID :="uuid:" + id.String()
+
+
+	request := `
 		<?xml version="1.0" encoding="UTF-8"?>
 		<e:Envelope
 		    xmlns:e="http://www.w3.org/2003/05/soap-envelope"
