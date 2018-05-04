@@ -2,7 +2,7 @@ package onvif
 
 import (
 	"errors"
-	"fmt"
+//	"fmt"
 	"net"
 	"regexp"
 	"strings"
