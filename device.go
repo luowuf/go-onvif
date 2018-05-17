@@ -5,16 +5,22 @@ import (
 )
 
 var deviceXMLNs = []string{
-	`xmlns:tds="http://www.onvif.org/ver10/device/wsdl"`,
-	`xmlns:tt="http://www.onvif.org/ver10/schema"`,
+	// `xmlns:tds="http://www.onvif.org/ver10/device/wsdl"`,
+	// `xmlns:tt="http://www.onvif.org/ver10/schema"`,
+	`xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`,
+	`xmlns:xsd="http://www.w3.org/2001/XMLSchema"`,
 }
 
 // GetInformation fetch information of ONVIF camera
 func (device Device) GetInformation() (DeviceInformation, error) {
 	// Create SOAP
 	soap := SOAP{
-		Body:  "<tds:GetDeviceInformation/>",
-		XMLNs: deviceXMLNs,
+		Body:     "<GetDeviceInformation  xmlns=\"http://www.onvif.org/ver10/media/wsdl\"/>",
+		XMLNs:    deviceXMLNs,
+		User:     device.User,
+		Password: device.Password,
+		URI:      "/onvif/device_service",
+		Method:   "POST",
 	}
 
 	// Send SOAP request
@@ -28,7 +34,7 @@ func (device Device) GetInformation() (DeviceInformation, error) {
 	if err != nil {
 		return DeviceInformation{}, err
 	}
-
+	//fmt.Println("deviceInfo:", deviceInfo)
 	// Parse interface to struct
 	result := DeviceInformation{}
 	if mapInfo, ok := deviceInfo.(map[string]interface{}); ok {
@@ -37,6 +43,89 @@ func (device Device) GetInformation() (DeviceInformation, error) {
 		result.FirmwareVersion = interfaceToString(mapInfo["FirmwareVersion"])
 		result.SerialNumber = interfaceToString(mapInfo["SerialNumber"])
 		result.HardwareID = interfaceToString(mapInfo["HardwareId"])
+	}
+
+	return result, nil
+}
+
+func (device Device) GetServices() (DeviceServices, error) {
+
+	soap := SOAP{
+		XMLNs: deviceXMLNs,
+		Body: `<GetServices xmlns="http://www.onvif.org/ver10/device/wsdl">
+			<IncludeCapability>false</IncludeCapability>
+		</GetServices>`,
+		User:     device.User,
+		Password: device.Password,
+		URI:      "/onvif/device_service",
+		Method:   "POST",
+	}
+	// Send SOAP request
+	response, err := soap.SendRequest(device.XAddr)
+	if err != nil {
+		return DeviceServices{}, err
+	}
+
+	// Parse response to interface
+	deviceServices, err := response.ValueForPath("Envelope.Body.GetServicesResponse")
+	if err != nil {
+		return DeviceServices{}, err
+	}
+	//fmt.Println(deviceServices)
+	// Parse interface to struct
+	result := DeviceServices{}
+	// if mapInfo, ok := deviceServices.(map[string]interface{}); ok {
+	// 	Service := mapInfo["Service"]
+	// 	fmt.Println("Service1111:", Service)
+	//
+	// }
+
+	for _, v := range deviceServices.(map[string]interface{}) {
+		// fmt.Print(k)
+		// fmt.Print("-----------1")
+		// fmt.Println(v)
+
+		for _, v2 := range v.([]interface{}) {
+			// fmt.Print(k2)
+			// fmt.Print("-----------2")
+			// fmt.Println(v2)
+			// fmt.Println(v2.(map[string]interface{})["XAddr"])
+			switch v2.(map[string]interface{})["Namespace"] {
+			case "http://www.onvif.org/ver10/device/wsdl":
+				result.Devices_service = "http://10.5.0.241/onvif/device_service"
+			case "http://www.onvif.org/ver10/media/wsdl":
+				result.Media = "http://10.5.0.241/onvif/Media"
+			case "http://www.onvif.org/ver10/events/wsdl":
+				result.Events = "http://10.5.0.241/onvif/Events"
+			case "http://www.onvif.org/ver20/ptz/wsdl":
+				result.PTZ = "http://10.5.0.241/onvif/PTZ"
+			case "http://www.onvif.org/ver20/imaging/wsdl":
+				result.Imageing = "http://10.5.0.241/onvif/Imaging"
+			case "http://www.onvif.org/ver10/deviceIO/wsdl":
+				result.DeviceIO = "http://10.5.0.241/onvif/DeviceIO"
+			case "http://www.onvif.org/ver20/analytics/wsdl":
+				result.Analytics = "http://10.5.0.241/onvif/Analytics"
+			case "http://www.onvif.org/ver10/recording/wsdl":
+				result.Recording = "http://10.5.0.241/onvif/Recording"
+			case "http://www.onvif.org/ver10/search/wsdl":
+				result.SearchRecording = "http://10.5.0.241/onvif/SearchRecording"
+			case "http://www.onvif.org/ver10/replay/wsdl":
+				result.Replay = "http://10.5.0.241/onvif/Replay"
+			}
+
+			// for k3, v3 := range v2.(map[string]interface{}) {
+			// 	fmt.Print(k3)
+			// 	fmt.Print("-----------3")
+			// 	fmt.Println(v3)
+			//
+			// 	switch Namespace {
+			// 	case condition:
+			//
+			// 	}
+			//
+			// }
+		}
+
 	}
 
 	return result, nil
