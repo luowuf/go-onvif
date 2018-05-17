@@ -18,6 +18,20 @@ type DeviceInformation struct {
 	SerialNumber    string
 }
 
+// DeviceServices contains services of ONVIF camera
+type DeviceServices struct {
+	Devices_service string
+	Media           string
+	Events          string
+	PTZ             string
+	Imageing        string
+	DeviceIO        string
+	Analytics       string
+	Recording       string
+	SearchRecording string
+	Replay          string
+}
+
 // NetworkCapabilities contains networking capabilities of ONVIF camera
 type NetworkCapabilities struct {
 	DynDNS     bool
