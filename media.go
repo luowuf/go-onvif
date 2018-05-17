@@ -1,22 +1,26 @@
 package onvif
 
 var mediaXMLNs = []string{
-	`xmlns:trt="http://www.onvif.org/ver10/media/wsdl"`,
-	`xmlns:tt="http://www.onvif.org/ver10/schema"`,
+	// `xmlns:trt="http://www.onvif.org/ver10/media/wsdl"`,
+	// `xmlns:tt="http://www.onvif.org/ver10/schema"`,
+	`xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`,
+	`xmlns:xsd="http://www.w3.org/2001/XMLSchema"`,
 }
 
 // GetProfiles fetch available media profiles of ONVIF camera
-func (device Device) GetProfiles() ([]MediaProfile, error) {
+func (device Device) GetProfiles(services DeviceServices) ([]MediaProfile, error) {
 	// Create SOAP
 	soap := SOAP{
-		Body:  "<trt:GetProfiles/>",
-		XMLNs: mediaXMLNs,
+		//Body:     "<trt:GetProfiles/>",
+		Body:     "<GetProfiles xmlns=\"http://www.onvif.org/ver10/media/wsdl\"/>",
+		XMLNs:    mediaXMLNs,
 		User:     device.User,
 		Password: device.Password,
+		URI:      "/onvif/media",
+		Method:   "POST",
 	}
 
-	// Send SOAP request
-	response, err := soap.SendRequest(device.XAddr)
+	response, err := soap.SendRequest(services.Media)
 	if err != nil {
 		return []MediaProfile{}, err
 	}
@@ -123,23 +127,25 @@ func (device Device) GetProfiles() ([]MediaProfile, error) {
 
 // GetStreamURI fetch stream URI of a media profile.
 // Possible protocol is UDP, HTTP or RTSP
-func (device Device) GetStreamURI(profileToken, protocol string) (MediaURI, error) {
+func (device Device) GetStreamURI(services DeviceServices, profileToken, protocol string) (MediaURI, error) {
 	// Create SOAP
 	soap := SOAP{
 		XMLNs: mediaXMLNs,
-		Body: `<trt:GetStreamUri>
-			<trt:StreamSetup>
-				<tt:Stream>RTP-Unicast</tt:Stream>
-				<tt:Transport><tt:Protocol>` + protocol + `</tt:Protocol></tt:Transport>
-			</trt:StreamSetup>
-			<trt:ProfileToken>` + profileToken + `</trt:ProfileToken>
-		</trt:GetStreamUri>`,
+		Body: `<GetStreamUri xmlns="http://www.onvif.org/ver10/media/wsdl">
+			<StreamSetup>
+				<Stream xmlns="http://www.onvif.org/ver10/schema">RTP-Unicast</Stream>
+				<Transport xmlns="http://www.onvif.org/ver10/schema"><Protocol>` + protocol + `</Protocol></Transport>
+			</StreamSetup>
+			<ProfileToken>` + profileToken + `</ProfileToken>
+		</GetStreamUri>`,
 		User:     device.User,
 		Password: device.Password,
+		URI:      "/onvif/media",
+		Method:   "POST",
 	}
 
 	// Send SOAP request
-	response, err := soap.SendRequest(device.XAddr)
+	response, err := soap.SendRequest(services.Media)
 	if err != nil {
 		return MediaURI{}, err
 	}

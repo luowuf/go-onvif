@@ -9,9 +9,16 @@ import (
 func TestGetProfiles(t *testing.T) {
 	log.Println("Test GetProfiles")
 
-	res, err := testDevice.GetProfiles()
+	deviceServices, err := testDevice.GetServices()
+
 	if err != nil {
 		t.Error(err)
+		return
+	}
+	res, err := testDevice.GetProfiles(deviceServices)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
 	js := prettyJSON(&res)
@@ -21,11 +28,26 @@ func TestGetProfiles(t *testing.T) {
 func TestGetStreamURI(t *testing.T) {
 	log.Println("Test GetStreamURI")
 
-	res, err := testDevice.GetStreamURI("IPCProfilesToken0", "UDP")
+	deviceServices, err := testDevice.GetServices()
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
-	js := prettyJSON(&res)
-	fmt.Println(js)
+	mediaProfiles, err := testDevice.GetProfiles(deviceServices)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	for _, mediaProfile := range mediaProfiles {
+		fmt.Println(mediaProfile)
+
+		mediaURI, err := testDevice.GetStreamURI(deviceServices, mediaProfile.Token, "UDP")
+		if err != nil {
+			t.Error(err)
+		}
+		js := prettyJSON(&mediaURI)
+		fmt.Println(js)
+	}
+
 }
