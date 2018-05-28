@@ -71,61 +71,35 @@ func (device Device) GetServices() (DeviceServices, error) {
 	if err != nil {
 		return DeviceServices{}, err
 	}
-	//fmt.Println(deviceServices)
+
 	// Parse interface to struct
 	result := DeviceServices{}
-	// if mapInfo, ok := deviceServices.(map[string]interface{}); ok {
-	// 	Service := mapInfo["Service"]
-	// 	fmt.Println("Service1111:", Service)
-	//
-	// }
 
 	for _, v := range deviceServices.(map[string]interface{}) {
-		// fmt.Print(k)
-		// fmt.Print("-----------1")
-		// fmt.Println(v)
-
 		for _, v2 := range v.([]interface{}) {
-			// fmt.Print(k2)
-			// fmt.Print("-----------2")
-			// fmt.Println(v2)
-			// fmt.Println(v2.(map[string]interface{})["XAddr"])
 			switch v2.(map[string]interface{})["Namespace"] {
 			case "http://www.onvif.org/ver10/device/wsdl":
-				result.Devices_service = "http://10.5.0.241/onvif/device_service"
+				result.Devices_service = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver10/media/wsdl":
-				result.Media = "http://10.5.0.241/onvif/Media"
+				result.Media = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver10/events/wsdl":
-				result.Events = "http://10.5.0.241/onvif/Events"
+				result.Events = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver20/ptz/wsdl":
-				result.PTZ = "http://10.5.0.241/onvif/PTZ"
+				result.PTZ = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver20/imaging/wsdl":
-				result.Imageing = "http://10.5.0.241/onvif/Imaging"
+				result.Imageing = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver10/deviceIO/wsdl":
-				result.DeviceIO = "http://10.5.0.241/onvif/DeviceIO"
+				result.DeviceIO = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver20/analytics/wsdl":
-				result.Analytics = "http://10.5.0.241/onvif/Analytics"
+				result.Analytics = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver10/recording/wsdl":
-				result.Recording = "http://10.5.0.241/onvif/Recording"
+				result.Recording = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver10/search/wsdl":
-				result.SearchRecording = "http://10.5.0.241/onvif/SearchRecording"
+				result.SearchRecording = v2.(map[string]interface{})["XAddr"].(string)
 			case "http://www.onvif.org/ver10/replay/wsdl":
-				result.Replay = "http://10.5.0.241/onvif/Replay"
+				result.Replay = v2.(map[string]interface{})["XAddr"].(string)
 			}
-
-			// for k3, v3 := range v2.(map[string]interface{}) {
-			// 	fmt.Print(k3)
-			// 	fmt.Print("-----------3")
-			// 	fmt.Println(v3)
-			//
-			// 	switch Namespace {
-			// 	case condition:
-			//
-			// 	}
-			//
-			// }
 		}
-
 	}
 
 	return result, nil
